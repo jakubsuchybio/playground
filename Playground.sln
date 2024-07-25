@@ -6,6 +6,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
+		NuGet.Config = NuGet.Config
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicroBenchmarks", "MicroBenchmarks\MicroBenchmarks.csproj", "{4D7D4785-635A-4F2A-9FB2-CB2B8B4B9BA9}"
