@@ -17,7 +17,7 @@ public class UsbDescriptors
         SerialNumber = serialNumber;
     }
     
-    public static UsbDescriptors Empty => new UsbDescriptors(string.Empty, string.Empty, string.Empty);
+    public static UsbDescriptors Empty => new(string.Empty, string.Empty, string.Empty);
 }
 
 public static class PublicApi

@@ -7,29 +7,6 @@ namespace UsbDescriptors.FinalForm;
 
 public static class InternalApi
 {
-    private const int CR_SUCCESS = 0;
-    private const int USB_STRING_DESCRIPTOR_TYPE = 3;
-
-
-    private const uint FILE_DEVICE_UNKNOWN = 0x00000022;
-    private const uint FILE_DEVICE_USB = FILE_DEVICE_UNKNOWN;
-    private const uint METHOD_BUFFERED = 0;
-    private const uint FILE_ANY_ACCESS = 0;
-
-    private const uint USB_GET_NODE_CONNECTION_INFORMATION_EX = 274;
-
-    private static readonly uint IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX =
-        GetCtlCode(FILE_DEVICE_USB, USB_GET_NODE_CONNECTION_INFORMATION_EX, METHOD_BUFFERED, FILE_ANY_ACCESS);
-
-    private const uint USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION = 260;
-
-    private static readonly uint IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION =
-        GetCtlCode(FILE_DEVICE_USB, USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION, METHOD_BUFFERED, FILE_ANY_ACCESS);
-
-
-    private static uint GetCtlCode(uint deviceType, uint function, uint method, uint access) =>
-        ((deviceType) << 16) | ((access) << 14) | ((function) << 2) | (method);
-
     internal static Dictionary<string, string> GetAllUsbDevices()
     {
         var result = new Dictionary<string, string>();
@@ -77,11 +54,11 @@ public static class InternalApi
                     var parentPath = Marshal.PtrToStringAuto(pDevicePath);
 
                     // First child is by CM_Get_Child
-                    if (Interop.CM_Get_Child(out var childDevInst, deviceInfoData.DevInst, 0) != CR_SUCCESS)
+                    if (Interop.CM_Get_Child(out var childDevInst, deviceInfoData.DevInst, 0) != Interop.CR_SUCCESS)
                         continue;
 
                     var childDeviceId = new StringBuilder(256);
-                    if (Interop.CM_Get_Device_ID(childDevInst, childDeviceId, childDeviceId.Capacity, 0) != CR_SUCCESS)
+                    if (Interop.CM_Get_Device_ID(childDevInst, childDeviceId, childDeviceId.Capacity, 0) != Interop.CR_SUCCESS)
                     {
                         Console.WriteLine("Error getting the device id of a child"); // TODO change to log
                         continue;
@@ -90,10 +67,10 @@ public static class InternalApi
                     result.Add(childDeviceId.ToString(), parentPath);
 
                     // Another children is by CM_Get_Sibling
-                    while (Interop.CM_Get_Sibling(out childDevInst, childDevInst, 0) == CR_SUCCESS)
+                    while (Interop.CM_Get_Sibling(out childDevInst, childDevInst, 0) == Interop.CR_SUCCESS)
                     {
                         var siblingDeviceId = new StringBuilder(256);
-                        if (Interop.CM_Get_Device_ID(childDevInst, siblingDeviceId, siblingDeviceId.Capacity, 0) != CR_SUCCESS)
+                        if (Interop.CM_Get_Device_ID(childDevInst, siblingDeviceId, siblingDeviceId.Capacity, 0) != Interop.CR_SUCCESS)
                         {
                             Console.WriteLine("Error getting the device id of a sibling"); // TODO change to log
                             continue;
@@ -122,7 +99,7 @@ public static class InternalApi
         if (string.IsNullOrEmpty(parentPath) || string.IsNullOrEmpty(deviceId))
             return UsbDescriptors.Empty;
 
-        if (Interop.CM_Locate_DevNodeA(out var deviceInst, deviceId, 0) != CR_SUCCESS)
+        if (Interop.CM_Locate_DevNodeA(out var deviceInst, deviceId, 0) != Interop.CR_SUCCESS)
         {
             Console.WriteLine($"Could not get device instance handle for '{deviceId}'");
             return UsbDescriptors.Empty;
@@ -131,7 +108,7 @@ public static class InternalApi
         var props = new USB_DEVICE_PROPS();
         var size = (uint)Marshal.SizeOf(props.port);
         const uint CM_DRP_ADDRESS = 29;
-        if (Interop.CM_Get_DevNode_Registry_PropertyA(deviceInst, CM_DRP_ADDRESS, IntPtr.Zero, ref props.port, ref size, 0) != CR_SUCCESS)
+        if (Interop.CM_Get_DevNode_Registry_PropertyA(deviceInst, CM_DRP_ADDRESS, IntPtr.Zero, ref props.port, ref size, 0) != Interop.CR_SUCCESS)
         {
             Console.WriteLine($"Could not get port for '{deviceId}'");
             return UsbDescriptors.Empty;
@@ -161,7 +138,7 @@ public static class InternalApi
             {
                 Marshal.StructureToPtr(connInfo, connInfoPtr, false);
 
-                if (!Interop.DeviceIoControl(handle, IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX, connInfoPtr, size, connInfoPtr, size, out size, IntPtr.Zero))
+                if (!Interop.DeviceIoControl(handle, Interop.IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX, connInfoPtr, size, connInfoPtr, size, out size, IntPtr.Zero))
                 {
                     Console.WriteLine($"Could not get node connection information for '{deviceId}': {Marshal.GetLastWin32Error()}");
                     return UsbDescriptors.Empty;
@@ -194,31 +171,33 @@ public static class InternalApi
 
     private static string GetUsbStringDescriptor(IntPtr deviceHandle, uint port, byte index, ushort languageId)
     {
-        var descriptorRequest = new USB_DESCRIPTOR_REQUEST
+        var descriptorRequestWithString = new USB_DESCRIPTOR_REQUEST_WITH_STRING
         {
-            ConnectionIndex = port,
-            SetupPacket = new USB_SETUP_PACKET
+            DescriptorRequest = new USB_DESCRIPTOR_REQUEST
             {
-                bmRequest = 0x80, // Device-to-host, standard, device
-                bRequest = 0x06, // GET_DESCRIPTOR
-                wValue = (ushort)((USB_STRING_DESCRIPTOR_TYPE << 8) | index),
-                wIndex = languageId,
-                wLength = (ushort)Marshal.SizeOf<USB_STRING_DESCRIPTOR>()
-            }
+                ConnectionIndex = port,
+                SetupPacket = new USB_SETUP_PACKET
+                {
+                    bmRequest = 0x80, // Device-to-host, standard, device
+                    bRequest = 0x06, // GET_DESCRIPTOR
+                    wValue = (ushort)((Interop.USB_STRING_DESCRIPTOR_TYPE << 8) | index),
+                    wIndex = languageId,
+                    wLength = (ushort)Marshal.SizeOf<USB_STRING_DESCRIPTOR>()
+                }
+            },
+            StringDescriptor = new USB_STRING_DESCRIPTOR()
         };
 
-        var bufferSize = Marshal.SizeOf<USB_DESCRIPTOR_REQUEST>() + Marshal.SizeOf<USB_STRING_DESCRIPTOR>();
+        var bufferSize = Marshal.SizeOf<USB_DESCRIPTOR_REQUEST_WITH_STRING>();
         var buffer = Marshal.AllocHGlobal(bufferSize);
 
         try
         {
-            Marshal.StructureToPtr(descriptorRequest, buffer, false);
-            var stringDescriptorPtr = IntPtr.Add(buffer, Marshal.SizeOf<USB_DESCRIPTOR_REQUEST>());
-            Marshal.StructureToPtr(new USB_STRING_DESCRIPTOR(), stringDescriptorPtr, false);
+            Marshal.StructureToPtr(descriptorRequestWithString, buffer, false);
 
             var result = Interop.DeviceIoControl(
                 deviceHandle,
-                IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION,
+                Interop.IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION,
                 buffer,
                 (uint)bufferSize,
                 buffer,
@@ -233,8 +212,8 @@ public static class InternalApi
                 return null;
             }
 
-            var stringDescriptor = Marshal.PtrToStructure<USB_STRING_DESCRIPTOR>(stringDescriptorPtr);
-            return new string(stringDescriptor.bString, 0, stringDescriptor.bLength - 2);
+            descriptorRequestWithString = Marshal.PtrToStructure<USB_DESCRIPTOR_REQUEST_WITH_STRING>(buffer);
+            return new string(descriptorRequestWithString.StringDescriptor.bString, 0, descriptorRequestWithString.StringDescriptor.bLength - 2);
         }
         finally
         {

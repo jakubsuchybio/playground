@@ -6,54 +6,75 @@ namespace UsbDescriptors.FinalForm;
 
 internal static class Interop
 {
-    [DllImport("setupapi.dll", SetLastError = true)]
-    public static extern IntPtr SetupDiGetClassDevs(ref Guid ClassGuid, IntPtr Enumerator, IntPtr hwndParent, int Flags);
+    internal const int CR_SUCCESS = 0;
+    internal const int USB_STRING_DESCRIPTOR_TYPE = 3;
+
+    private const uint FILE_DEVICE_UNKNOWN = 0x00000022;
+    private const uint FILE_DEVICE_USB = FILE_DEVICE_UNKNOWN;
+    private const uint METHOD_BUFFERED = 0;
+    private const uint FILE_ANY_ACCESS = 0;
+
+    private const uint USB_GET_NODE_CONNECTION_INFORMATION_EX = 274;
+
+    internal static readonly uint IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX =
+        GetCtlCode(FILE_DEVICE_USB, USB_GET_NODE_CONNECTION_INFORMATION_EX, METHOD_BUFFERED, FILE_ANY_ACCESS);
+
+    private const uint USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION = 260;
+
+    internal static readonly uint IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION =
+        GetCtlCode(FILE_DEVICE_USB, USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION, METHOD_BUFFERED, FILE_ANY_ACCESS);
+
+    private static uint GetCtlCode(uint deviceType, uint function, uint method, uint access) =>
+        ((deviceType) << 16) | ((access) << 14) | ((function) << 2) | (method);
     
     [DllImport("setupapi.dll", SetLastError = true)]
-    public static extern bool SetupDiDestroyDeviceInfoList(IntPtr DeviceInfoSet);
+    internal static extern IntPtr SetupDiGetClassDevs(ref Guid ClassGuid, IntPtr Enumerator, IntPtr hwndParent, int Flags);
+    
+    [DllImport("setupapi.dll", SetLastError = true)]
+    internal static extern bool SetupDiDestroyDeviceInfoList(IntPtr DeviceInfoSet);
 
     [DllImport("setupapi.dll", SetLastError = true)]
-    public static extern bool SetupDiEnumDeviceInfo(IntPtr DeviceInfoSet, uint MemberIndex, ref SP_DEVINFO_DATA DeviceInfoData);
+    internal static extern bool SetupDiEnumDeviceInfo(IntPtr DeviceInfoSet, uint MemberIndex, ref SP_DEVINFO_DATA DeviceInfoData);
     
     [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    public static extern bool SetupDiEnumDeviceInterfaces(IntPtr DeviceInfoSet, IntPtr DeviceInfoData, ref Guid InterfaceClassGuid, uint MemberIndex, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
+    internal static extern bool SetupDiEnumDeviceInterfaces(IntPtr DeviceInfoSet, IntPtr DeviceInfoData, ref Guid InterfaceClassGuid, uint MemberIndex, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData);
 
     [DllImport("setupapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    public static extern bool SetupDiGetDeviceInterfaceDetail(IntPtr DeviceInfoSet, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData, IntPtr DeviceInterfaceDetailData, int DeviceInterfaceDetailDataSize, ref int RequiredSize, ref SP_DEVINFO_DATA DeviceInfoData);
+    internal static extern bool SetupDiGetDeviceInterfaceDetail(IntPtr DeviceInfoSet, ref SP_DEVICE_INTERFACE_DATA DeviceInterfaceData, IntPtr DeviceInterfaceDetailData, int DeviceInterfaceDetailDataSize, ref int RequiredSize, ref SP_DEVINFO_DATA DeviceInfoData);
 
     [DllImport("cfgmgr32.dll", CharSet = CharSet.Auto)]
-    public static extern int CM_Get_Child(out uint pdnDevInst, uint dnDevInst, uint ulFlags);
+    internal static extern int CM_Get_Child(out uint pdnDevInst, uint dnDevInst, uint ulFlags);
 
     [DllImport("cfgmgr32.dll", CharSet = CharSet.Auto)]
-    public static extern int CM_Get_Device_ID(uint dnDevInst, StringBuilder Buffer, int BufferLen, uint ulFlags);
+    internal static extern int CM_Get_Device_ID(uint dnDevInst, StringBuilder Buffer, int BufferLen, uint ulFlags);
 
     [DllImport("cfgmgr32.dll", CharSet = CharSet.Auto)]
-    public static extern int CM_Get_Sibling(out uint pdnDevInst, uint dnDevInst, uint ulFlags);
+    internal static extern int CM_Get_Sibling(out uint pdnDevInst, uint dnDevInst, uint ulFlags);
     
     [DllImport("cfgmgr32.dll", SetLastError = true)]
-    public static extern uint CM_Locate_DevNodeA(out uint pdnDevInst, string pDeviceID, uint ulFlags);
+    internal static extern uint CM_Locate_DevNodeA(out uint pdnDevInst, string pDeviceID, uint ulFlags);
     
     [DllImport("cfgmgr32.dll", SetLastError = true)]
-    public static extern uint CM_Get_DevNode_Registry_PropertyA(uint dnDevInst, uint ulProperty, IntPtr pulRegDataType, ref uint Buffer, ref uint pulLength, uint ulFlags);
+    internal static extern uint CM_Get_DevNode_Registry_PropertyA(uint dnDevInst, uint ulProperty, IntPtr pulRegDataType, ref uint Buffer, ref uint pulLength, uint ulFlags);
     
     [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern IntPtr CreateFileA(string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
+    internal static extern IntPtr CreateFileA(string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
     
     [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool DeviceIoControl(IntPtr hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+    internal static extern bool DeviceIoControl(IntPtr hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
     
     [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool CloseHandle(IntPtr hObject);
+    internal static extern bool CloseHandle(IntPtr hObject);
 }
 
 
 [StructLayout(LayoutKind.Sequential)]
-public struct SP_DEVINFO_DATA
+internal struct SP_DEVINFO_DATA
 {
-    public readonly int cbSize;
-    public Guid ClassGuid;
-    public uint DevInst;
-    public IntPtr Reserved;
+    internal readonly int cbSize;
+    internal Guid ClassGuid;
+    internal uint DevInst;
+    internal IntPtr Reserved;
 
     public SP_DEVINFO_DATA()
     {
@@ -62,12 +83,12 @@ public struct SP_DEVINFO_DATA
 }
 
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-public struct SP_DEVICE_INTERFACE_DATA
+internal struct SP_DEVICE_INTERFACE_DATA
 {
-    public readonly int cbSize;
-    public Guid InterfaceClassGuid;
-    public int Flags;
-    public IntPtr Reserved;
+    internal readonly int cbSize;
+    internal Guid InterfaceClassGuid;
+    internal int Flags;
+    internal IntPtr Reserved;
 
     public SP_DEVICE_INTERFACE_DATA()
     {
@@ -76,10 +97,10 @@ public struct SP_DEVICE_INTERFACE_DATA
 }
 
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-public struct SP_DEVICE_INTERFACE_DETAIL_DATA_UNMANAGED
+internal struct SP_DEVICE_INTERFACE_DETAIL_DATA_UNMANAGED
 {
-    public readonly int cbSize;
-    public IntPtr DevicePath; // Pointer to the device path string
+    internal readonly int cbSize;
+    internal IntPtr DevicePath; // Pointer to the device path string
 
     public SP_DEVICE_INTERFACE_DETAIL_DATA_UNMANAGED()
     {
@@ -88,101 +109,108 @@ public struct SP_DEVICE_INTERFACE_DETAIL_DATA_UNMANAGED
 }
 
 [StructLayout(LayoutKind.Sequential)]
-struct USB_DEVICE_PROPS
+internal struct USB_DEVICE_PROPS
 {
-    public uint vid;
-    public uint pid;
-    public uint speed;
-    public uint lower_speed;
-    public uint port;
-    public bool is_USB;
-    public bool is_SCSI;
-    public bool is_CARD;
-    public bool is_UASP;
-    public bool is_VHD;
-    public bool is_Removable;
+    internal uint vid;
+    internal uint pid;
+    internal uint speed;
+    internal uint lower_speed;
+    internal uint port;
+    internal bool is_USB;
+    internal bool is_SCSI;
+    internal bool is_CARD;
+    internal bool is_UASP;
+    internal bool is_VHD;
+    internal bool is_Removable;
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct USB_NODE_CONNECTION_INFORMATION_EX
+internal struct USB_NODE_CONNECTION_INFORMATION_EX
 {
-    public uint ConnectionIndex;
-    public USB_DEVICE_DESCRIPTOR DeviceDescriptor;
-    public byte CurrentConfigurationValue;
-    public byte Speed;
-    public byte DeviceIsHub;
-    public ushort DeviceAddress;
-    public uint NumberOfOpenPipes;
-    public USB_PIPE_INFO[] PipeList;
+    internal uint ConnectionIndex;
+    internal USB_DEVICE_DESCRIPTOR DeviceDescriptor;
+    internal byte CurrentConfigurationValue;
+    internal byte Speed;
+    internal byte DeviceIsHub;
+    internal ushort DeviceAddress;
+    internal uint NumberOfOpenPipes;
+    internal USB_PIPE_INFO[] PipeList;
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct USB_DEVICE_DESCRIPTOR
+internal struct USB_DEVICE_DESCRIPTOR
 {
-    public byte bLength;
-    public byte bDescriptorType;
-    public ushort bcdUSB;
-    public byte bDeviceClass;
-    public byte bDeviceSubClass;
-    public byte bDeviceProtocol;
-    public byte bMaxPacketSize0;
-    public ushort idVendor;
-    public ushort idProduct;
-    public ushort bcdDevice;
-    public byte iManufacturer;
-    public byte iProduct;
-    public byte iSerialNumber;
-    public byte bNumConfigurations;
+    internal byte bLength;
+    internal byte bDescriptorType;
+    internal ushort bcdUSB;
+    internal byte bDeviceClass;
+    internal byte bDeviceSubClass;
+    internal byte bDeviceProtocol;
+    internal byte bMaxPacketSize0;
+    internal ushort idVendor;
+    internal ushort idProduct;
+    internal ushort bcdDevice;
+    internal byte iManufacturer;
+    internal byte iProduct;
+    internal byte iSerialNumber;
+    internal byte bNumConfigurations;
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct USB_PIPE_INFO
+internal struct USB_PIPE_INFO
 {
-    public USB_ENDPOINT_DESCRIPTOR EndpointDescriptor;
-    public uint ScheduleOffset;
+    internal USB_ENDPOINT_DESCRIPTOR EndpointDescriptor;
+    internal uint ScheduleOffset;
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct USB_ENDPOINT_DESCRIPTOR
+internal struct USB_ENDPOINT_DESCRIPTOR
 {
-    public byte bLength;
-    public byte bDescriptorType;
-    public byte bEndpointAddress;
-    public byte bmAttributes;
-    public ushort wMaxPacketSize;
-    public byte bInterval;
+    internal byte bLength;
+    internal byte bDescriptorType;
+    internal byte bEndpointAddress;
+    internal byte bmAttributes;
+    internal ushort wMaxPacketSize;
+    internal byte bInterval;
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct USB_DESCRIPTOR_REQUEST
+internal struct USB_DESCRIPTOR_REQUEST_WITH_STRING
 {
-    public uint ConnectionIndex;
-    public USB_SETUP_PACKET SetupPacket;
+    internal USB_DESCRIPTOR_REQUEST DescriptorRequest;
+    internal USB_STRING_DESCRIPTOR StringDescriptor;
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct USB_SETUP_PACKET
+internal struct USB_DESCRIPTOR_REQUEST
 {
-    public byte bmRequest;
-    public byte bRequest;
-    public ushort wValue;
-    public ushort wIndex;
-    public ushort wLength;
+    internal uint ConnectionIndex;
+    internal USB_SETUP_PACKET SetupPacket;
 }
 
 [StructLayout(LayoutKind.Sequential)]
-public struct USB_STRING_DESCRIPTOR
+internal struct USB_SETUP_PACKET
 {
-    public byte bLength;
-    public byte bDescriptorType;
+    internal byte bmRequest;
+    internal byte bRequest;
+    internal ushort wValue;
+    internal ushort wIndex;
+    internal ushort wLength;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct USB_STRING_DESCRIPTOR
+{
+    internal byte bLength;
+    internal byte bDescriptorType;
 
     [MarshalAs(UnmanagedType.ByValArray, SizeConst = 256)]
-    public char[] bString;
+    internal char[] bString;
 }
 
 /// <summary>Access flags</summary>
 [Flags]
-public enum FILE_ACCESS_FLAGS : uint
+internal enum FILE_ACCESS_FLAGS : uint
 {
     /// <summary>Read</summary>
     GENERIC_READ = 0x80000000,
@@ -199,7 +227,7 @@ public enum FILE_ACCESS_FLAGS : uint
 
 /// <summary>Share</summary>
 [Flags]
-public enum FILE_SHARE : UInt32
+internal enum FILE_SHARE : UInt32
 {
     /// <summary>
     /// Enables subsequent open operations on a file or device to request read access.
@@ -222,7 +250,7 @@ public enum FILE_SHARE : UInt32
 }
 
 /// <summary>Disposition</summary>
-public enum CreateDisposition : UInt32
+internal enum CreateDisposition : UInt32
 {
     /// <summary>Create new</summary>
     CREATE_NEW = 1,
